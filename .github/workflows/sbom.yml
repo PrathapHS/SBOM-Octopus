@@ -3,19 +3,19 @@ name: Generate SBOM
 on:
   push:
     branches:
-      - main   # ✅ trigger only when changes are pushed to main
+      - main   # ✅ trigger only on pushes to main
 
 jobs:
   sbom:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # required to push files back
+      contents: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          token: ${{ secrets.GH_PAT }}   # use your personal access token
+          token: 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
 
       - name: Install Syft
         run: |
@@ -36,6 +36,4 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add reports/sbom.json
           git commit -m "Add SBOM report [skip ci]" || echo "No changes to commit"
-          git push origin HEAD:main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}   # your PAT secret
+          git push https://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@github.com/PrathapHS/SBOM-Octopus.git HEAD:main
