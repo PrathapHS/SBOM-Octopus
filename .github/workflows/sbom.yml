@@ -15,6 +15,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
+          fetch-depth: 0
           token: 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
 
       - name: Install Syft
