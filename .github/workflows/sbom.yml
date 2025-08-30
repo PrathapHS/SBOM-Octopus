@@ -1,72 +1,39 @@
-name: Generate and Upload SBOM
+name: SBOM Workflow
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch: # allow manual trigger
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   sbom:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repository
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      # 2. Install Syft
       - name: Install Syft
         run: |
           curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-          syft version
 
-      # 3. Generate SBOM
       - name: Generate SBOM
-        run: |
-          syft dir:. -o json > sbom.json
+        run: syft dir:. -o json > sbom.json
 
-      # 4. Patch SBOM with name & version
-      - name: Patch SBOM Metadata
+      - name: Patch SBOM with name and version
         run: |
-          python - <<'EOF'
+          python3 - <<EOF
           import json
           with open("sbom.json") as f:
               sbom = json.load(f)
-
-          # Inject custom metadata
           sbom["artifactName"] = "sbom-octopus-test"
           sbom["artifactVersion"] = "0.0.1"
-
           with open("sbom.json", "w") as f:
               json.dump(sbom, f, indent=2)
-
-          print("✅ Injected custom name/version into sbom.json")
           EOF
 
-      # 5. Show files
-      - name: Show files
-        run: ls -la
-
-      # 6. Preview sbom.json in logs (first 50 lines)
-      - name: Preview SBOM
-        run: head -n 50 sbom.json
-
-      # 7. Upload sbom.json as GitHub Artifact
-      - name: Upload sbom.json as Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: sbom
-          path: sbom.json
-
-      # 8. Upload SBOM to Octopus
-      - name: Upload SBOM to Octopus
-        env:
-          OCTOPUS_SERVER: ${{ secrets.OCTOPUS_SERVER }}
-          OCTOPUS_API_KEY: ${{ secrets.OCTOPUS_API_KEY }}
-          OCTOPUS_PROJECT_ID: ${{ secrets.OCTOPUS_PROJECT_ID }}
+      - name: Store SBOM in repo
         run: |
-          curl -X POST "${OCTOPUS_SERVER}/api/artifacts?overwriteMode=OverwriteExisting" \
-            -H "X-Octopus-ApiKey: ${OCTOPUS_API_KEY}" \
-            -F "file=@sbom.json" \
-            -F "project=${OCTOPUS_PROJECT_ID}" \
-            -F "name=sbom.json"
+          mkdir -p reports
+          cp sbom.json reports/sbom.json
+          git config user.name "github-actions[bot]"
