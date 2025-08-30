@@ -3,7 +3,7 @@ name: Generate and Upload SBOM
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch: # allows manual trigger
+  workflow_dispatch: # allow manual trigger
 
 jobs:
   sbom:
@@ -23,20 +23,38 @@ jobs:
       # 3. Generate SBOM
       - name: Generate SBOM
         run: |
-          syft dir:. -o json --name sbom-octopus-test --version 0.0.1 > sbom.json
+          syft dir:. -o json > sbom.json
 
-      # 4. Show files
+      # 4. Patch SBOM with name & version
+      - name: Patch SBOM Metadata
+        run: |
+          python - <<'EOF'
+          import json
+          with open("sbom.json") as f:
+              sbom = json.load(f)
+
+          # Inject custom metadata
+          sbom["artifactName"] = "sbom-octopus-test"
+          sbom["artifactVersion"] = "0.0.1"
+
+          with open("sbom.json", "w") as f:
+              json.dump(sbom, f, indent=2)
+
+          print("✅ Injected custom name/version into sbom.json")
+          EOF
+
+      # 5. Show files
       - name: Show files
         run: ls -la
 
-      # 5. Upload sbom.json as GitHub Artifact
+      # 6. Upload sbom.json as GitHub Artifact
       - name: Upload sbom.json as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: sbom
           path: sbom.json
 
-      # 6. Upload SBOM to Octopus
+      # 7. Upload SBOM to Octopus
       - name: Upload SBOM to Octopus
         env:
           OCTOPUS_SERVER: ${{ secrets.OCTOPUS_SERVER }}
