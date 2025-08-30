@@ -1,30 +1,41 @@
+name: Generate SBOM
+
+on:
+  push:
+    branches:
+      - main   # ✅ trigger only when changes are pushed to main
+
 jobs:
   sbom:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # still useful for GITHUB_TOKEN fallback
+      contents: write   # required to push files back
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          token: ${{ secrets.GH_PAT }}   # ✅ use your PAT
+          token: ${{ secrets.GH_PAT }}   # use your personal access token
 
       - name: Install Syft
         run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+          | sh -s -- -b /usr/local/bin
 
       - name: Generate SBOM
         run: syft dir:. -o json > sbom.json
 
-      - name: Store SBOM in repo
+      - name: Save SBOM to reports/
         run: |
           mkdir -p reports
           cp sbom.json reports/sbom.json
+
+      - name: Commit and Push SBOM
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add reports/sbom.json
           git commit -m "Add SBOM report [skip ci]" || echo "No changes to commit"
           git push origin HEAD:main
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}   # ✅ your PAT is used here
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}   # your PAT secret
