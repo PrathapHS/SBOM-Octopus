@@ -1,7 +1,7 @@
 import requests
 
-OCTOPUS_SERVER = "https://octopus.company.com"
-API_KEY = "API-XXXXXXXXXXXXXXXXX"
+OCTOPUS_SERVER = "https://prathaphs.octopus.app"
+API_KEY = "API-27EW••••••••"
 PROJECT_ID = "Projects-123"
 FILE_PATH = "sbom.json"
 
