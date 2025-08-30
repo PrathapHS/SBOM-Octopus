@@ -1,1 +1,35 @@
+name: Generate and Upload SBOM
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sbom:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Install Syft (for SBOM generation)
+      - name: Install Syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+      # 3. Generate SBOM
+      - name: Generate SBOM
+        run: |
+          syft dir:. -o json > sbom.json
+
+      # 4. Upload SBOM.json to Octopus
+      - name: Upload SBOM to Octopus
+        run: |
+          curl -X POST "${{ secrets.OCTOPUS_SERVER }}/api/artifacts?overwriteMode=OverwriteExisting" \
+          -H "X-Octopus-ApiKey: ${{ secrets.OCTOPUS_API_KEY }}" \
+          -F "file=@sbom.json" \
+          -F "project=${{ secrets.OCTOPUS_PROJECT_ID }}" \
+          -F "name=sbom.json"
 
