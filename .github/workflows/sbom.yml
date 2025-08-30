@@ -3,7 +3,7 @@ name: Generate and Upload SBOM
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch: # allows manual trigger too
+  workflow_dispatch: # allows manual trigger
 
 jobs:
   sbom:
@@ -14,34 +14,29 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Set up Python
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      # 3. Install dependencies
-      - name: Install dependencies
+      # 2. Install Syft
+      - name: Install Syft
         run: |
-          pip install cyclonedx-bom requests setuptools
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          syft version
 
-      # 4. Generate SBOM
+      # 3. Generate SBOM
       - name: Generate SBOM
         run: |
           syft dir:. -o json --name sbom-octopus-test --version 0.0.1 > sbom.json
 
-      # 5. Show files in workspace
+      # 4. Show files
       - name: Show files
         run: ls -la
 
-      # 6. Upload sbom.json as GitHub Artifact (optional but useful)
+      # 5. Upload sbom.json as GitHub Artifact
       - name: Upload sbom.json as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: sbom
           path: sbom.json
 
-      # 7. Upload SBOM to Octopus
+      # 6. Upload SBOM to Octopus
       - name: Upload SBOM to Octopus
         env:
           OCTOPUS_SERVER: ${{ secrets.OCTOPUS_SERVER }}
