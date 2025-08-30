@@ -2,8 +2,8 @@ name: Generate and Upload SBOM
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+  workflow_dispatch: # allows manual trigger too
 
 jobs:
   sbom:
@@ -14,21 +14,42 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Install Syft (for SBOM generation)
-      - name: Install Syft
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+      # 2. Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-      # 3. Generate SBOM
+      # 3. Install dependencies
+      - name: Install dependencies
+        run: |
+          pip install cyclonedx-bom requests setuptools
+
+      # 4. Generate SBOM
       - name: Generate SBOM
         run: |
-          syft dir:. -o json > sbom.json
+          syft dir:. -o json --name sbom-octopus-test --version 0.0.1 > sbom.json
 
-      # 4. Upload SBOM.json to Octopus
+      # 5. Show files in workspace
+      - name: Show files
+        run: ls -la
+
+      # 6. Upload sbom.json as GitHub Artifact (optional but useful)
+      - name: Upload sbom.json as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.json
+
+      # 7. Upload SBOM to Octopus
       - name: Upload SBOM to Octopus
+        env:
+          OCTOPUS_SERVER: ${{ secrets.OCTOPUS_SERVER }}
+          OCTOPUS_API_KEY: ${{ secrets.OCTOPUS_API_KEY }}
+          OCTOPUS_PROJECT_ID: ${{ secrets.OCTOPUS_PROJECT_ID }}
         run: |
-          curl -X POST "${{ secrets.OCTOPUS_SERVER }}/api/artifacts?overwriteMode=OverwriteExisting" \
-          -H "X-Octopus-ApiKey: ${{ secrets.OCTOPUS_API_KEY }}" \
-          -F "file=@sbom.json" \
-          -F "project=${{ secrets.OCTOPUS_PROJECT_ID }}" \
-          -F "name=sbom.json"
+          curl -X POST "${OCTOPUS_SERVER}/api/artifacts?overwriteMode=OverwriteExisting" \
+            -H "X-Octopus-ApiKey: ${OCTOPUS_API_KEY}" \
+            -F "file=@sbom.json" \
+            -F "project=${OCTOPUS_PROJECT_ID}" \
+            -F "name=sbom.json"
