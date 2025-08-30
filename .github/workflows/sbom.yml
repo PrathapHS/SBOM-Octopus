@@ -47,14 +47,18 @@ jobs:
       - name: Show files
         run: ls -la
 
-      # 6. Upload sbom.json as GitHub Artifact
+      # 6. Preview sbom.json in logs (first 50 lines)
+      - name: Preview SBOM
+        run: head -n 50 sbom.json
+
+      # 7. Upload sbom.json as GitHub Artifact
       - name: Upload sbom.json as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: sbom
           path: sbom.json
 
-      # 7. Upload SBOM to Octopus
+      # 8. Upload SBOM to Octopus
       - name: Upload SBOM to Octopus
         env:
           OCTOPUS_SERVER: ${{ secrets.OCTOPUS_SERVER }}
